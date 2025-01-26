@@ -5,6 +5,7 @@
 
 #define PPM_LIB_IMPL_TIM
 #include "ppm.h"
+#include "entropy.h"
 
 enum Error {
     IO_ERR=1,
@@ -65,6 +66,7 @@ int main(int argc, char **argv) {
 				return ARG_ERR;
 		}
 	}
+
 	if (optind >= argc) {
 		fprintf(stderr, "Missing input file name.\n");
 		usage();
@@ -104,13 +106,19 @@ int main(int argc, char **argv) {
     }
     // PROCESSING
 
-    /* TO BE DONE */
+    int32_t *entropy = calloc(input.w*input.h, sizeof(*entropy));
+    int32_t max, min;
+    FILE *entropy_img = fopen("entropy.ppm", "w");
+
+    compute_entropy_edge(entropy, &max, &min, input.pixels, input.w, input.h);
+    err = write_entropy(entropy, entropy_img, input.w, input.h, min, max);
+    if (err) printf("entropy err?\n");
 
     // WRITING
     output_file = fopen(output_filename, "w");
     if (!output_file) {
         fclose(input_file);
-		free(input.pixels);
+		// free(input.pixels);
 
         return IO_ERR;
     }
@@ -119,13 +127,13 @@ int main(int argc, char **argv) {
     if (err) {
         fclose(input_file);
         fclose(output_file);
-		free(input.pixels);
+		// free(input.pixels);
 
         print_ppm_error(err);
 		return PPM_ERR;
     }
 
-	free(input.pixels);
+	// free(input.pixels);
 	fclose(input_file);
 	fclose(output_file);
     return 0;
