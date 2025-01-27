@@ -55,13 +55,6 @@ int main(int argc, char **argv) {
 			case 'o':
 				output_filename = optarg;
 				break;
-			case '?':
-				if (optopt == 'o')
-					fprintf (stderr, "Option -%c requires an argument.\n", optopt);
-				else
-					fprintf (stderr, "Unknown option character %c\n", optopt);
-				usage();
-				return ARG_ERR;
 			default:
 				usage();
 				return ARG_ERR;
