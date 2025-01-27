@@ -5,11 +5,13 @@
 
 #define PPM_LIB_IMPL_TIM
 #include "ppm.h"
+#include "entropy.h"
 
 enum Error {
     IO_ERR=1,
 	ARG_ERR,
     MALLOC_ERR,
+    CALLOC_ERR,
 	PPM_ERR,
 };
 
@@ -53,18 +55,12 @@ int main(int argc, char **argv) {
 			case 'o':
 				output_filename = optarg;
 				break;
-			case '?':
-				if (optopt == 'o')
-					fprintf (stderr, "Option -%c requires an argument.\n", optopt);
-				else
-					fprintf (stderr, "Unknown option character `\\x%x'.\n", optopt);
-				usage();
-				return ARG_ERR;
 			default:
 				usage();
 				return ARG_ERR;
 		}
 	}
+
 	if (optind >= argc) {
 		fprintf(stderr, "Missing input file name.\n");
 		usage();
@@ -102,31 +98,57 @@ int main(int argc, char **argv) {
         print_ppm_error(err);;
         return PPM_ERR;
     }
+
+    fclose(input_file);
     // PROCESSING
 
-    /* TO BE DONE */
+    // entropy calc
+    int32_t *entropy = calloc(input.w*input.h, sizeof(*entropy));
+    if (!entropy) {
+		free(input.pixels);
+
+        return CALLOC_ERR;
+    }
+
+    int32_t max, min;
+    FILE *entropy_img = fopen("entropy.ppm", "w");
+    if (!entropy_img) {
+		free(input.pixels);
+        free(entropy);
+
+        return CALLOC_ERR;
+    }
+
+    compute_entropy_edge(entropy, &max, &min, input.pixels, input.w, input.h, 0); // vertically
+    compute_entropy_edge(entropy, &max, &min, input.pixels, input.w, input.h, 1); // horizontally
+    err = write_entropy(entropy, entropy_img, input.w, input.h, min, max);
+    if (err) printf("entropy err?\n");
+
+    // removing pixels
+
 
     // WRITING
     output_file = fopen(output_filename, "w");
     if (!output_file) {
-        fclose(input_file);
 		free(input.pixels);
+        free(entropy);
 
         return IO_ERR;
     }
 
     err = write_ppm_p6(input.pixels, output_file, input.w, input.h, bitwidth);
     if (err) {
-        fclose(input_file);
         fclose(output_file);
+
 		free(input.pixels);
+        free(entropy);
 
         print_ppm_error(err);
 		return PPM_ERR;
     }
 
-	free(input.pixels);
-	fclose(input_file);
-	fclose(output_file);
+    free(input.pixels);
+    free(entropy);
+    fclose(output_file);
     return 0;
 }
