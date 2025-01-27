@@ -63,7 +63,7 @@ int write_entropy(int32_t *entropy_levels, FILE *img, uint32_t w, uint32_t h, in
 int compute_entropy_edge(int32_t *entropy_levels, int32_t *max, int32_t *min,  uint8_t *pixels, uint32_t w, uint32_t h) {
     const uint32_t ew = 3, eh = 3;
     const float edge_matrix[] = {-1,  0, 1,
-                                 -2,  0, 2,
+                                 -1,  0, 1,
                                  -1,  0, 1,};
 
     *max = INT32_MIN, *min = INT32_MAX;
@@ -76,12 +76,9 @@ int compute_entropy_edge(int32_t *entropy_levels, int32_t *max, int32_t *min,  u
                 for (uint32_t ex = 0; ex < ew; ex++) {
                     if (!is_in_bounds(x+ex-1, y+ey-1, w, h)) continue;
 
-                    float to_add = edge_matrix[Cidx(ex, ey, ew)] * (pixels[3*Cidx(x+ex-1, y+ey-1, w)] + pixels[3*Cidx(x+ex-1, y+ey-1, w)+1] + pixels[3*Cidx(x+ex-1, y+ey-1, w)+2]);
-                    val += to_add;
-                    printf("%f ", to_add);
+                    val += edge_matrix[Cidx(ex, ey, ew)] * (pixels[3*Cidx(x+ex-1, y+ey-1, w)] + pixels[3*Cidx(x+ex-1, y+ey-1, w)+1] + pixels[3*Cidx(x+ex-1, y+ey-1, w)+2]);
                 }
             }
-            printf("\n");
 
             entropy_levels[Cidx(x, y, w)] = val;
             *max = (*max < val) ? val : *max;
