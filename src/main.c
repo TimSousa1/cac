@@ -16,8 +16,8 @@ enum Error {
 };
 
 typedef struct {
-    int32_t w;
-    int32_t h;
+    uint32_t w;
+    uint32_t h;
     u_int8_t *pixels;
 } Image;
 
@@ -124,14 +124,50 @@ int main(int argc, char **argv) {
     err = write_entropy(entropy, entropy_img, input.w, input.h, min, max);
     if (err) printf("entropy err?\n");
 
+    fclose(entropy_img);
+
     // removing pixels
+    uint32_t N = 1000; // should be taken as an argument
+    uint32_t **to_remove = malloc(N * sizeof(*to_remove));
+    if (!to_remove) {
+        free(input.pixels);
+        free(entropy);
+        return MALLOC_ERR;
+    }
+
+    for (uint32_t i = 0; i < N; i++) {
+        to_remove[i] = malloc(input.h * sizeof(*to_remove[i]));
+        if (!to_remove[i]) {
+            for (int32_t j = (int32_t)(i-1); j >= 0; j--) {
+                printf("%d ", j);
+                free(to_remove[j]);
+            }
+
+            free(input.pixels);
+            free(entropy);
+            free(to_remove);
+            return MALLOC_ERR;
+        }
+    }
+
+    for (uint32_t n = 0; n < N; n++) {
+        for (uint32_t y = 0; y < input.h; y++) {
+            to_remove[n][y] = n*2;
+        }
+    }
+
+    FILE *cropped = fopen("cropped.ppm", "w");
+    write_cropped(input.pixels, to_remove, cropped, input.w, input.h, N);
 
 
     // WRITING
     output_file = fopen(output_filename, "w");
     if (!output_file) {
-		free(input.pixels);
+        free(input.pixels);
         free(entropy);
+
+        for (uint32_t i = 0; i < N; i++) free(to_remove[i]);
+        free(to_remove);
 
         return IO_ERR;
     }
@@ -140,15 +176,21 @@ int main(int argc, char **argv) {
     if (err) {
         fclose(output_file);
 
-		free(input.pixels);
+        free(input.pixels);
         free(entropy);
 
+        for (uint32_t i = 0; i < N; i++) free(to_remove[i]);
+        free(to_remove);
+
         print_ppm_error(err);
-		return PPM_ERR;
+        return PPM_ERR;
     }
+
+    for (uint32_t i = 0; i < N; i++) free(to_remove[i]);
+    free(to_remove);
+    fclose(output_file);
 
     free(input.pixels);
     free(entropy);
-    fclose(output_file);
     return 0;
 }

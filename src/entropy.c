@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include "entropy.h"
 
@@ -129,3 +130,68 @@ int _compute_entropy_edge(int32_t *entropy_levels, int32_t *max, int32_t *min,  
 
     return 0;
 }
+
+int srt(const void *a, const void *b) {
+    int _a = *(int*) a;
+    int _b = *(int*) b;
+    return  (_a > _b);
+}
+
+int write_cropped(uint8_t *pixels, uint32_t **to_remove, FILE *img, uint32_t w, uint32_t h, uint32_t N) {
+
+    if (!img) return ENTROPY_IO_ERR;
+
+    rewind(img);
+    fprintf(img, "%s\n%d %d\n%d\n", "P6", w-N, h, 255);
+
+    uint32_t *buf = malloc(N*sizeof(*buf));
+    int32_t n_bytes = -1;
+    int32_t tmp = 0;
+
+    for (uint32_t y = 0; y < h; y++) {
+        for (uint32_t n = 0; n < N; n++) {
+            buf[n] = to_remove[n][y];
+        }
+
+        qsort(buf, N, sizeof(*buf), srt);
+
+        tmp = n_bytes;
+        n_bytes = fwrite(pixels, sizeof(*pixels), (buf[0])*3, img);
+        if (n_bytes != (int32_t) (buf[0]*3*sizeof(*pixels)))
+            return ENTROPY_IO_ERR;
+        printf("0:%d ", n_bytes);
+        n_bytes += tmp;
+
+        pixels += (buf[0]+1)*3;
+        for (uint32_t n = 1; n < N; n++) {
+            tmp = n_bytes;
+            n_bytes = fwrite(pixels, sizeof(*pixels), (buf[n]-buf[n-1]-1)*3, img);
+
+            if (n_bytes != (int32_t)((buf[n]-buf[n-1]-1)*3*sizeof(*pixels))) 
+                return ENTROPY_IO_ERR;
+
+            printf("%u:%d ", n, n_bytes);
+            n_bytes += tmp;
+
+            pixels += (buf[n]-buf[n-1])*3;
+        }
+
+        tmp = n_bytes;
+        n_bytes = fwrite(pixels, sizeof(*pixels), (w-buf[N-1]-1)*3, img);
+
+        if (n_bytes != (int32_t) ((w-buf[N-1]-1)*3*sizeof(*pixels)))
+            return ENTROPY_IO_ERR;
+
+        pixels += (w-buf[N-1]-1)*3;
+        printf("last:%d\n", n_bytes);
+        n_bytes += tmp;
+        printf("%d/%d\n", n_bytes, (w-N)*h*3);
+    }
+
+    printf("[cropped] bytes written: %d/%d\n", n_bytes, (w-N)*h*3);
+    printf("[cropped] pixels written: %d/%d\n", n_bytes/3, (w-N)*h);
+    free(buf);
+
+    return 0;
+}
+
