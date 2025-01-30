@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/types.h>
+#include <stdbool.h>
 
 #define PPM_LIB_IMPL_TIM
 #include "ppm.h"
@@ -42,8 +43,8 @@ int main(int argc, char **argv) {
 
     Image input, output;
 
-    int32_t bitwidth = -1,
-		    magic_type = -1;
+    uint32_t bitwidth = 0;
+	int32_t magic_type = -1;
 
 	output_filename = default_out_name;
 
@@ -121,14 +122,14 @@ int main(int argc, char **argv) {
 
     compute_entropy_edge(entropy, &max, &min, input.pixels, input.w, input.h, 0); // vertically
     compute_entropy_edge(entropy, &max, &min, input.pixels, input.w, input.h, 1); // horizontally
-    err = write_entropy(entropy, entropy_img, input.w, input.h, min, max);
+    err = write_entropy(entropy, entropy_img, input.w, input.h, min, max, bitwidth);
     if (err) printf("entropy err?\n");
 
     fclose(entropy_img);
 
     // removing pixels
-    uint32_t N = 1000; // should be taken as an argument
-    uint32_t **to_remove = malloc(N * sizeof(*to_remove));
+    uint32_t N = 1; // should be taken as an argument
+    int32_t **to_remove = malloc(N * sizeof(*to_remove));
     if (!to_remove) {
         free(input.pixels);
         free(entropy);
@@ -156,8 +157,23 @@ int main(int argc, char **argv) {
         }
     }
 
+    remove_pixels(entropy, to_remove, input.w, input.h, input.w/2, 0);
+    // for (int y = 0; y < input.h; y++) {
+    //     printf("%d ", to_remove[0][y]);
+    // }
+    // printf("\n");
+
+    FILE *removed = fopen("removed.ppm", "w");
+    write_to_remove(removed, input.pixels, to_remove, input.w, input.h, bitwidth);
+
+    // return 0;
+
+    // for (uint32_t y = 0; y < input.h; y++)
+    //     printf("%d ", to_remove[0][y]);
+
     FILE *cropped = fopen("cropped.ppm", "w");
-    write_cropped(input.pixels, to_remove, cropped, input.w, input.h, N);
+    write_cropped(input.pixels, to_remove, cropped, input.w, input.h, N, bitwidth);
+    return 0;
 
 
     // WRITING

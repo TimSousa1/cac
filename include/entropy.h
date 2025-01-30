@@ -2,8 +2,8 @@
 #include <stdint.h>
 
 #define Cidx(x, y, maxx) ((y)*(maxx)+(x))
-#define Ccol(val, max, min) ( ((val)-(min)) * 255/((max)-(min)) )
-#define is_in_bounds(x, y, maxx, maxy) ((x) > 0 && (x) < (maxx) && (y) > 0 && (y) < (maxy))
+#define Ccol(val, max, min, b) ( ((val)-(min)) * (b)/((max)-(min)) )
+#define is_in_bounds(x, y, maxx, maxy) ((x) >= 0 && (x) < (maxx) && (y) >= 0 && (y) < (maxy))
 
 enum Entropy_error {
     ENTROPY_IO_ERR=1,
@@ -16,8 +16,12 @@ enum Entropy_error {
 int compute_entropy(int32_t *entropy_levels, int32_t *max, int32_t *min,  uint8_t *pixels, uint32_t w, uint32_t h);
 
 // writes the entropy levels to a file
-int write_entropy(int32_t *entropy_levels, FILE *img, uint32_t w, uint32_t h, int32_t min, int32_t max);
-int write_entropy_p3(int32_t *entropy_levels, FILE *img, uint32_t w, uint32_t h, int32_t min, int32_t max);
+int write_entropy(int32_t *entropy_levels, FILE *img, uint32_t w, uint32_t h, int32_t min, int32_t max, uint32_t b);
+int write_entropy_p3(int32_t *entropy_levels, FILE *img, uint32_t w, uint32_t h, int32_t min, int32_t max, uint32_t b);
 
 int compute_entropy_edge(int32_t *entropy_levels, int32_t *max, int32_t *min,  uint8_t *pixels, uint32_t w, uint32_t h, uint8_t mode);
-int write_cropped(uint8_t *pixels, uint32_t **to_remove, FILE *img, uint32_t w, uint32_t h, uint32_t N);
+int write_cropped(uint8_t *pixels, int32_t **to_remove, FILE *img, uint32_t w, uint32_t h, uint32_t N, uint32_t b);
+// int *remove_pixels(int32_t *entropy, uint32_t w, uint32_t h, int32_t **to_remove, uint32_t N);
+int remove_pixels(int32_t *entropy, int32_t **to_remove, uint32_t w, uint32_t h, int start, int n);
+void extract_entropy(int32_t *entropy, uint32_t w, uint32_t h);
+int write_to_remove(FILE *img, uint8_t *pixels, int32_t **to_remove, uint32_t w, uint32_t h, uint32_t b);
