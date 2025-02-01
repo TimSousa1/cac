@@ -29,14 +29,14 @@ void usage(void) {
 	printf("\t-o <outfile>\t\tChanges the output file name. Defaults to \"out.ppm\"\n");
 }
 
-int main(int argc, char **argv) {
+int main(/*int argc, char **argv*/) {
+    return 0;
 
     int32_t err,
 			c;
 	
-    char *input_filename = NULL,
-		 *output_filename = NULL,
-		 default_out_name[] = "out.ppm";
+    char *input_filename = "in.ppm",
+		 *output_filename = "out.ppm";
 
     FILE *input_file = NULL,
          *output_file = NULL;
@@ -46,29 +46,30 @@ int main(int argc, char **argv) {
     uint32_t bitwidth = 0;
 	int32_t magic_type = -1;
 
-	output_filename = default_out_name;
+	// while (c = getopt(argc, argv, "i:ho:"), c != -1) {
+	// 	switch (c) {
+	// 		case 'h':
+	// 			usage();
+	// 			return 0;
+	// 		case 'o':
+	// 			output_filename = optarg;
+	// 			break;
+ //            case 'i':
+ //                input_filename = optarg;
+ //                break;
+	// 		default:
+	// 			usage();
+	// 			return ARG_ERR;
+	// 	}
+	// }
 
-	while (c = getopt(argc, argv, "ho:"), c != -1) {
-		switch (c) {
-			case 'h':
-				usage();
-				return 0;
-			case 'o':
-				output_filename = optarg;
-				break;
-			default:
-				usage();
-				return ARG_ERR;
-		}
-	}
+	// if (optind >= argc) {
+	// 	fprintf(stderr, "Missing input file name.\n");
+	// 	usage();
+	// 	return ARG_ERR;
+	// }
 
-	if (optind >= argc) {
-		fprintf(stderr, "Missing input file name.\n");
-		usage();
-		return ARG_ERR;
-	}
-	
-	input_filename = argv[optind];
+	// input_filename = argv[optind];
 
 	input.pixels = NULL;
     input_file = fopen(input_filename, "r");
@@ -122,7 +123,7 @@ int main(int argc, char **argv) {
 
     compute_entropy_edge(entropy, &max, &min, input.pixels, input.w, input.h, 0); // vertically
     compute_entropy_edge(entropy, &max, &min, input.pixels, input.w, input.h, 1); // horizontally
-    err = write_entropy(entropy, entropy_img, input.w, input.h, min, max, bitwidth);
+    err = write_entropy(entropy, entropy_img, input.w, input.h, min, max, bitwidth, 1);
     if (err) printf("entropy err?\n");
 
     fclose(entropy_img);
@@ -137,7 +138,7 @@ int main(int argc, char **argv) {
     }
 
     for (uint32_t i = 0; i < N; i++) {
-        to_remove[i] = malloc(input.h * sizeof(*to_remove[i]));
+        to_remove[i] = calloc(input.h, sizeof(*to_remove[i]));
         if (!to_remove[i]) {
             for (int32_t j = (int32_t)(i-1); j >= 0; j--) {
                 printf("%d ", j);
@@ -151,28 +152,31 @@ int main(int argc, char **argv) {
         }
     }
 
-    for (uint32_t n = 0; n < N; n++) {
-        for (uint32_t y = 0; y < input.h; y++) {
-            to_remove[n][y] = n*2;
-        }
-    }
+    // for (uint32_t n = 0; n < N; n++) {
+    //     for (uint32_t y = 0; y < input.h; y++) {
+    //         to_remove[n][y] = n*2;
+    //     }
+    // }
 
-    remove_pixels(entropy, to_remove, input.w, input.h, input.w/2, 0);
+    remove_pixels(entropy, to_remove, input.w, input.h, input.w/2, N);
     // for (int y = 0; y < input.h; y++) {
     //     printf("%d ", to_remove[0][y]);
     // }
     // printf("\n");
 
     FILE *removed = fopen("removed.ppm", "w");
-    write_to_remove(removed, input.pixels, to_remove, input.w, input.h, bitwidth);
+    write_to_remove(removed, input.pixels, to_remove, input.w, input.h, bitwidth, N);
+
+    FILE *removed_entropy = fopen("removed_entropy.ppm", "w");
+    write_entropy_to_remove(entropy, removed_entropy, input.w, input.h, min, max, bitwidth, to_remove);
 
     // return 0;
 
     // for (uint32_t y = 0; y < input.h; y++)
     //     printf("%d ", to_remove[0][y]);
 
-    FILE *cropped = fopen("cropped.ppm", "w");
-    write_cropped(input.pixels, to_remove, cropped, input.w, input.h, N, bitwidth);
+    // FILE *cropped = fopen("cropped.ppm", "w");
+    // write_cropped(input.pixels, to_remove, cropped, input.w, input.h, N, bitwidth);
     return 0;
 
 

@@ -16,12 +16,13 @@ enum Entropy_error {
 int compute_entropy(int32_t *entropy_levels, int32_t *max, int32_t *min,  uint8_t *pixels, uint32_t w, uint32_t h);
 
 // writes the entropy levels to a file
-int write_entropy(int32_t *entropy_levels, FILE *img, uint32_t w, uint32_t h, int32_t min, int32_t max, uint32_t b);
 int write_entropy_p3(int32_t *entropy_levels, FILE *img, uint32_t w, uint32_t h, int32_t min, int32_t max, uint32_t b);
 
 int compute_entropy_edge(int32_t *entropy_levels, int32_t *max, int32_t *min,  uint8_t *pixels, uint32_t w, uint32_t h, uint8_t mode);
 int write_cropped(uint8_t *pixels, int32_t **to_remove, FILE *img, uint32_t w, uint32_t h, uint32_t N, uint32_t b);
 // int *remove_pixels(int32_t *entropy, uint32_t w, uint32_t h, int32_t **to_remove, uint32_t N);
-int remove_pixels(int32_t *entropy, int32_t **to_remove, uint32_t w, uint32_t h, int start, int n);
+int remove_pixels(int32_t *entropy, int32_t **to_remove, uint32_t w, uint32_t h, int start, uint32_t N);
 void extract_entropy(int32_t *entropy, uint32_t w, uint32_t h);
-int write_to_remove(FILE *img, uint8_t *pixels, int32_t **to_remove, uint32_t w, uint32_t h, uint32_t b);
+int write_to_remove(FILE *img, uint8_t *pixels, int32_t **to_remove, uint32_t w, uint32_t h, uint32_t b, uint32_t N);
+int write_entropy(int32_t *entropy_levels, FILE *img, uint32_t w, uint32_t h, int32_t min, int32_t max, uint32_t b, uint32_t mode);
+int write_entropy_to_remove(int32_t *entropy, FILE *img, uint32_t w, uint32_t h, int32_t min, int32_t max, uint32_t b, int32_t **to_remove);
