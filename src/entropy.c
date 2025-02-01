@@ -213,7 +213,10 @@ int srt_cost(const void *a, const void *b) {
 int remove_pixels(int32_t *entropy, int32_t **to_remove, uint32_t w, uint32_t h, int start, uint32_t N){
     // allocating grid
     c_node *nodes = calloc(w*(h+1), sizeof(*nodes)); // last line is finishing line
+    if (!nodes) return -1;
+
     c_node **queue = calloc(w*h, sizeof(*queue));    // queue of items to visit
+    if (!queue) return -1;
     // bool *removed = calloc(w*h, sizeof(*removed));   // bitmap of already removed items
 
     // possible moves
@@ -225,13 +228,17 @@ int remove_pixels(int32_t *entropy, int32_t **to_remove, uint32_t w, uint32_t h,
         printf("n: %u\n", 0);
         // start
         memset(nodes, -1, w*h*sizeof(*nodes));
-        memset(queue, 0, w*h*sizeof(*queue)); // already calloc'd
+        memset(queue, 0, w*h*sizeof(*queue));
+
 
         int32_t q_el = 0; // index of element to be added
 
         for (uint32_t i = 0; i < w*h; i++) {
             nodes[i].visited = 0;
             nodes[i].came_from = NULL;
+            nodes[i].x = -1;
+            nodes[i].y = -1;
+            nodes[i].cost = -1;
         }
 
         // initializing finishing line
@@ -249,6 +256,7 @@ int remove_pixels(int32_t *entropy, int32_t **to_remove, uint32_t w, uint32_t h,
         root.x = start;
         root.y = 0;
         root.came_from = NULL;
+        root.cost = 0;
 
         queue[0] = &root;
         q_el++;
@@ -256,11 +264,11 @@ int remove_pixels(int32_t *entropy, int32_t **to_remove, uint32_t w, uint32_t h,
         cur = queue[0];
         q_el--;
 
-        // uint64_t it = 0;
+        uint64_t it = 0;
 
         do {
-            // printf("%lu\n", it);
-            // it++;
+            printf("%lu\n", it);
+            it++;
             // if (cur->y < h) removed[Cidx(cur->x, cur->y, w)] = 1;
             cur->visited = 1;
             c_node *to_add[3] = {0}; // pointers to valid neighbours
@@ -272,13 +280,13 @@ int remove_pixels(int32_t *entropy, int32_t **to_remove, uint32_t w, uint32_t h,
                 int32_t new_y = cur->y+1;
 
                 // seems like these lines make the program go crazy..
-                if (new_y > (int32_t)h+1) goto skip_for;
-                for (uint32_t ni = 0; ni < n; ni++) {
-                    if (new_x >= to_remove[ni][new_y]) {
-                        new_x++;
-                    }
-                }
-skip_for:
+//                 if (new_y > (int32_t)h+1) goto skip_for;
+//                 for (uint32_t ni = 0; ni < n; ni++) {
+//                     if (new_x >= to_remove[ni][new_y]) {
+//                         new_x++;
+//                     }
+//                 }
+// skip_for:
 
                 // skip if out of bounds
                 if (!is_in_bounds(new_x, new_y, (int32_t)w, (int32_t)(h+1))) continue;
@@ -295,7 +303,8 @@ skip_for:
                 new->x = new_x;
                 new->y = new_y;
 
-                int64_t edge_cost = (int64_t)(/*entropy[Cidx(new_x, new_y, w)]*/entropy[Cidx(new_x, new_y, w)]);
+                int64_t edge_cost = 0;
+                edge_cost = (int64_t)(/*entropy[Cidx(new_x, new_y, w)]*/entropy[Cidx(new_x, new_y, w)]);
                 edge_cost *= edge_cost; // no negatives allowed
                                         // if cost < 0: the node hasn't been visited and it's cost should be updated
                                         // if not visited, the node should be updated
@@ -303,6 +312,7 @@ skip_for:
                                         //   and where we came from too
 
                 if (new->cost < 0 || new->cost > cur->cost + edge_cost) {
+                    printf("updating cost at (%d, %d) from %ld to %ld\n", new->x, new->y, new->cost, cur->cost+edge_cost);
                     new->cost = cur->cost + edge_cost;
                     new->came_from = cur;
 

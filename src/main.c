@@ -29,8 +29,7 @@ void usage(void) {
 	printf("\t-o <outfile>\t\tChanges the output file name. Defaults to \"out.ppm\"\n");
 }
 
-int main(/*int argc, char **argv*/) {
-    return 0;
+int main(int argc, char **argv) {
 
     int32_t err,
 			c;
@@ -46,22 +45,22 @@ int main(/*int argc, char **argv*/) {
     uint32_t bitwidth = 0;
 	int32_t magic_type = -1;
 
-	// while (c = getopt(argc, argv, "i:ho:"), c != -1) {
-	// 	switch (c) {
-	// 		case 'h':
-	// 			usage();
-	// 			return 0;
-	// 		case 'o':
-	// 			output_filename = optarg;
-	// 			break;
- //            case 'i':
- //                input_filename = optarg;
- //                break;
-	// 		default:
-	// 			usage();
-	// 			return ARG_ERR;
-	// 	}
-	// }
+	while (c = getopt(argc, argv, "i:ho:"), c != -1) {
+		switch (c) {
+			case 'h':
+				usage();
+				return 0;
+			case 'o':
+				output_filename = optarg;
+				break;
+            case 'i':
+                input_filename = optarg;
+                break;
+			default:
+				usage();
+				return ARG_ERR;
+		}
+	}
 
 	// if (optind >= argc) {
 	// 	fprintf(stderr, "Missing input file name.\n");
@@ -112,7 +111,7 @@ int main(/*int argc, char **argv*/) {
         return CALLOC_ERR;
     }
 
-    int32_t max, min;
+    int32_t max = INT32_MIN, min = INT32_MAX;
     FILE *entropy_img = fopen("entropy.ppm", "w");
     if (!entropy_img) {
 		free(input.pixels);
@@ -157,6 +156,8 @@ int main(/*int argc, char **argv*/) {
     //         to_remove[n][y] = n*2;
     //     }
     // }
+
+    for (int i = 0; i < input.w*input.h; i++) printf("%d ", entropy[i]);
 
     remove_pixels(entropy, to_remove, input.w, input.h, input.w/2, N);
     // for (int y = 0; y < input.h; y++) {
