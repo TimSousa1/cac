@@ -157,7 +157,7 @@ int main(int argc, char **argv) {
     //     }
     // }
 
-    for (int i = 0; i < input.w*input.h; i++) printf("%d ", entropy[i]);
+    // for (int i = 0; i < input.w*input.h; i++) printf("%d ", entropy[i]);
 
     remove_pixels(entropy, to_remove, input.w, input.h, input.w/2, N);
     // for (int y = 0; y < input.h; y++) {

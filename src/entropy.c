@@ -104,9 +104,9 @@ int write_entropy(int32_t *entropy_levels, FILE *img, uint32_t w, uint32_t h, in
 
     int32_t n_bytes;
     for (uint32_t i = 0; i < w*h*3; i++) {
-        int32_t cost = entropy_levels[i/3];
+        int64_t cost = entropy_levels[i/3];
         if (mode == 0) cost *= cost;
-        if (mode == 1) cost = abs(cost);
+        if (mode == 1) cost = labs(cost);
         const uint8_t col = (uint8_t) Ccol(cost, (int32_t) (max_col), 0, (int64_t)b) ;
         n_bytes = fwrite(&col, 1, 1, img);
 
@@ -212,7 +212,7 @@ int write_cropped(uint8_t *pixels, int32_t **to_remove, FILE *img, uint32_t w, u
 typedef struct _cost_node {
     uint32_t x;
     uint32_t y;
-    int32_t cost;
+    uint64_t cost;
     bool visited;
     struct _cost_node *came_from;
 } c_node;
@@ -271,7 +271,8 @@ int remove_pixels(int32_t *entropy, int32_t **to_remove, uint32_t w, uint32_t h,
         root.x = start;
         root.y = 0;
         root.came_from = NULL;
-        root.cost = entropy[Cidx(root.x, root.y, w)]*entropy[Cidx(root.x, root.y, w)];
+        // root.cost = entropy[Cidx(root.x, root.y, w)]*entropy[Cidx(root.x, root.y, w)];
+        root.cost = 0;
 
         queue[0] = &root;
         q_el++;
@@ -318,17 +319,18 @@ int remove_pixels(int32_t *entropy, int32_t **to_remove, uint32_t w, uint32_t h,
                 new->x = new_x;
                 new->y = new_y;
 
-                int32_t edge_cost = 0;
-                edge_cost = (/*entropy[Cidx(new_x, new_y, w)]*/entropy[Cidx(new_x, new_y, w)]);
+                int32_t cost = 0;
+                if (new_y != (int32_t) h) 
+                    cost = entropy[Cidx(new_x, new_y, w)];
 
-                edge_cost = abs(edge_cost); // no negatives allowed
+                uint64_t edge_cost = cost*cost;
                 
                                         // if cost < 0: the node hasn't been visited and it's cost should be updated
                                         // if not visited, the node should be updated
                                         // if it's cost is bigger than the one we found, update it accordingly
                                         //   and where we came from too
 
-                if (new->cost < 0 || new->cost > cur->cost + edge_cost) {
+                if (new->cost > cur->cost + edge_cost) {
                     // printf("updating cost at (%d, %d) from %d to %d\n", new->x, new->y, new->cost, cur->cost+edge_cost);
                     new->cost = cur->cost + edge_cost;
                     new->came_from = cur;
@@ -379,7 +381,7 @@ int remove_pixels(int32_t *entropy, int32_t **to_remove, uint32_t w, uint32_t h,
         // print found path and add to list
         uint32_t y = h-1;
         for (c_node *node = least_cost; node; node = node->came_from) {
-            printf("<-%d,%d (%d)", node->x, node->y, node->cost);
+            printf("<-%d,%d (%lu)", node->x, node->y, node->cost);
             // removed[Cidx(node->x, node->y, w)] = 1;
             to_remove[n][y] = (int32_t) node->x;
             y--;
