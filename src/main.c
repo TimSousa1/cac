@@ -125,7 +125,7 @@ int main(int argc, char **argv) {
     err = write_entropy(entropy, entropy_img, input.w, input.h, min, max, bitwidth, 1);
     if (err) printf("entropy err?\n");
 
-    fclose(entropy_img);
+    // fclose(entropy_img);
 
     // removing pixels
     uint32_t N = 1; // should be taken as an argument
@@ -178,8 +178,6 @@ int main(int argc, char **argv) {
 
     // FILE *cropped = fopen("cropped.ppm", "w");
     // write_cropped(input.pixels, to_remove, cropped, input.w, input.h, N, bitwidth);
-    return 0;
-
 
     // WRITING
     output_file = fopen(output_filename, "w");

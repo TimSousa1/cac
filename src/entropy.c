@@ -80,9 +80,23 @@ int write_entropy_to_remove(int32_t *entropy, FILE *img, uint32_t w, uint32_t h,
     return 0;
 }
 
+// mode 0: square
+// mode 1: abs
 int write_entropy(int32_t *entropy_levels, FILE *img, uint32_t w, uint32_t h, int32_t min, int32_t max, uint32_t b, uint32_t mode) {
 
-    if (mode == 1) min = 0;
+    int32_t max_col = max;
+
+    if (mode == 0) {
+        min = min*min;
+        max_col = max*max;
+    }
+
+    if (mode == 1) {
+        min = abs(min);
+        max_col = abs(max);
+    }
+
+
     if (max == min) return ENTROPY_REDUNDANT_WRITE;
 
     rewind(img);
@@ -90,9 +104,10 @@ int write_entropy(int32_t *entropy_levels, FILE *img, uint32_t w, uint32_t h, in
 
     int32_t n_bytes;
     for (uint32_t i = 0; i < w*h*3; i++) {
-        int64_t cost = entropy_levels[i/3];
-        if (mode == 1) cost *= cost;
-        const uint8_t col = (uint8_t) Ccol(cost, (int64_t) (max*max), 0, (int64_t)b) ;
+        int32_t cost = entropy_levels[i/3];
+        if (mode == 0) cost *= cost;
+        if (mode == 1) cost = abs(cost);
+        const uint8_t col = (uint8_t) Ccol(cost, (int32_t) (max_col), 0, (int64_t)b) ;
         n_bytes = fwrite(&col, 1, 1, img);
 
         if (n_bytes != 1) return ENTROPY_IO_ERR;
@@ -197,7 +212,7 @@ int write_cropped(uint8_t *pixels, int32_t **to_remove, FILE *img, uint32_t w, u
 typedef struct _cost_node {
     uint32_t x;
     uint32_t y;
-    int64_t cost;
+    int32_t cost;
     bool visited;
     struct _cost_node *came_from;
 } c_node;
@@ -256,7 +271,7 @@ int remove_pixels(int32_t *entropy, int32_t **to_remove, uint32_t w, uint32_t h,
         root.x = start;
         root.y = 0;
         root.came_from = NULL;
-        root.cost = 0;
+        root.cost = entropy[Cidx(root.x, root.y, w)]*entropy[Cidx(root.x, root.y, w)];
 
         queue[0] = &root;
         q_el++;
@@ -267,7 +282,7 @@ int remove_pixels(int32_t *entropy, int32_t **to_remove, uint32_t w, uint32_t h,
         uint64_t it = 0;
 
         do {
-            printf("%lu\n", it);
+            // printf("%lu\n", it);
             it++;
             // if (cur->y < h) removed[Cidx(cur->x, cur->y, w)] = 1;
             cur->visited = 1;
@@ -303,16 +318,18 @@ int remove_pixels(int32_t *entropy, int32_t **to_remove, uint32_t w, uint32_t h,
                 new->x = new_x;
                 new->y = new_y;
 
-                int64_t edge_cost = 0;
-                edge_cost = (int64_t)(/*entropy[Cidx(new_x, new_y, w)]*/entropy[Cidx(new_x, new_y, w)]);
-                edge_cost *= edge_cost; // no negatives allowed
+                int32_t edge_cost = 0;
+                edge_cost = (/*entropy[Cidx(new_x, new_y, w)]*/entropy[Cidx(new_x, new_y, w)]);
+
+                edge_cost = abs(edge_cost); // no negatives allowed
+                
                                         // if cost < 0: the node hasn't been visited and it's cost should be updated
                                         // if not visited, the node should be updated
                                         // if it's cost is bigger than the one we found, update it accordingly
                                         //   and where we came from too
 
                 if (new->cost < 0 || new->cost > cur->cost + edge_cost) {
-                    printf("updating cost at (%d, %d) from %ld to %ld\n", new->x, new->y, new->cost, cur->cost+edge_cost);
+                    // printf("updating cost at (%d, %d) from %d to %d\n", new->x, new->y, new->cost, cur->cost+edge_cost);
                     new->cost = cur->cost + edge_cost;
                     new->came_from = cur;
 
@@ -362,7 +379,7 @@ int remove_pixels(int32_t *entropy, int32_t **to_remove, uint32_t w, uint32_t h,
         // print found path and add to list
         uint32_t y = h-1;
         for (c_node *node = least_cost; node; node = node->came_from) {
-            printf("<-%d,%d (%ld)", node->x, node->y, node->cost);
+            printf("<-%d,%d (%d)", node->x, node->y, node->cost);
             // removed[Cidx(node->x, node->y, w)] = 1;
             to_remove[n][y] = (int32_t) node->x;
             y--;
