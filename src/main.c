@@ -128,7 +128,7 @@ int main(int argc, char **argv) {
     // fclose(entropy_img);
 
     // removing pixels
-    uint32_t N = 1; // should be taken as an argument
+    uint32_t N = 2; // should be taken as an argument
     int32_t **to_remove = malloc(N * sizeof(*to_remove));
     if (!to_remove) {
         free(input.pixels);

@@ -209,6 +209,7 @@ int write_cropped(uint8_t *pixels, int32_t **to_remove, FILE *img, uint32_t w, u
     return 0;
 }
 
+
 typedef struct _cost_node {
     uint32_t x;
     uint32_t y;
@@ -239,8 +240,8 @@ int remove_pixels(int32_t *entropy, int32_t **to_remove, uint32_t w, uint32_t h,
 
     c_node *cur = NULL;
 
-    for (uint32_t n = 0; n < N; n++, start++) {
-        printf("n: %u\n", 0);
+    for (uint32_t n = 0; n < N; n++/* , start++ */) {
+        printf("n: %u\n", n);
         // start
         memset(nodes, -1, w*h*sizeof(*nodes));
         memset(queue, 0, w*h*sizeof(*queue));
@@ -269,6 +270,13 @@ int remove_pixels(int32_t *entropy, int32_t **to_remove, uint32_t w, uint32_t h,
         // starting node
         c_node root;
         root.x = start;
+
+        for (uint32_t ni = 0; ni < n; ni++) {
+            if (root.x >= to_remove[ni][0]) {
+                root.x++;
+            }
+        }
+
         root.y = 0;
         root.came_from = NULL;
         // root.cost = entropy[Cidx(root.x, root.y, w)]*entropy[Cidx(root.x, root.y, w)];
@@ -279,6 +287,8 @@ int remove_pixels(int32_t *entropy, int32_t **to_remove, uint32_t w, uint32_t h,
 
         cur = queue[0];
         q_el--;
+
+        // printf("starting at (%d, %d)\n", cur->x, cur->y);
 
         uint64_t it = 0;
 
@@ -292,20 +302,29 @@ int remove_pixels(int32_t *entropy, int32_t **to_remove, uint32_t w, uint32_t h,
 
             // check all possible moves
             for (uint32_t m = 0; m < 3; m++) {
+                // printf("checking moves..\n");
                 int32_t new_x = cur->x + moves[m];
                 int32_t new_y = cur->y+1;
 
+
                 // seems like these lines make the program go crazy..
-//                 if (new_y > (int32_t)h+1) goto skip_for;
-//                 for (uint32_t ni = 0; ni < n; ni++) {
-//                     if (new_x >= to_remove[ni][new_y]) {
-//                         new_x++;
-//                     }
-//                 }
-// skip_for:
+                if (new_y >= (int32_t) h) goto skip_for;
+                // printf("shifting x by: 0 ");
+                // uint32_t shifted = 1;
+                printf("new_x %d -> ", new_x);
+                for (uint32_t ni = 0; ni < n; ni++) {
+                    if (new_x >= to_remove[ni][new_y]) {
+                        new_x++;
+                        // printf("%u ", shifted); shifted++;
+                    }
+                }
+                printf("%d\n", new_x);
+                // printf("\n");
+skip_for:
+                // printf("(%d ,%d)\n", new_x, new_y);
 
                 // skip if out of bounds
-                if (!is_in_bounds(new_x, new_y, (int32_t)w, (int32_t)(h+1))) continue;
+                if (!is_in_bounds(new_x, new_y, (int32_t)w, (int32_t)(h+1))) {/* printf("oob!\n");  */ continue; }
                 // if (new_x < 0 || new_x >= w || new_y < 0 || new_y > h) continue;
 
                 // while (removed[Cidx(new_x, new_y, w)] && (new_x+(m==1)*1 + (moves[m]) >= 0) && (new_x+(m==1)*1 + (moves[m]) < w)) new_x+= (m == 1)*1 + (moves[m]);
@@ -314,13 +333,13 @@ int remove_pixels(int32_t *entropy, int32_t **to_remove, uint32_t w, uint32_t h,
                 // create cost node
                 c_node *new = &nodes[Cidx(new_x, new_y, w)];
 
-                if (new->visited) continue; // we already know the fastest route
+                if (new->visited) {/* printf("already visited\n"); */continue;} // we already know the fastest route
 
                 new->x = new_x;
                 new->y = new_y;
 
                 int32_t cost = 0;
-                if (new_y != (int32_t) h) 
+                if (new_y < (int32_t) h) 
                     cost = entropy[Cidx(new_x, new_y, w)];
 
                 uint64_t edge_cost = cost*cost;
@@ -389,12 +408,10 @@ int remove_pixels(int32_t *entropy, int32_t **to_remove, uint32_t w, uint32_t h,
         // printf("\n");
     }
 
-
     free(nodes);
     free(queue);
     return 0;
 }
-
 
 int write_to_remove(FILE *img, uint8_t *pixels, int32_t **to_remove, uint32_t w, uint32_t h, uint32_t b, uint32_t N) {
     uint8_t *removed_pixels = malloc(w*h*3*sizeof(*removed_pixels));
@@ -404,8 +421,8 @@ int write_to_remove(FILE *img, uint8_t *pixels, int32_t **to_remove, uint32_t w,
         for (uint32_t y = 0; y < h; y++) {
             // printf("%d,%d ", to_remove[0][y], y);
 
-            removed_pixels[3*Cidx(to_remove[n][y], y, w)+0] = b;
-            removed_pixels[3*Cidx(to_remove[n][y], y, w)+1] = 0;
+            removed_pixels[3*Cidx(to_remove[n][y], y, w)+0] = b * (n == 0);
+            removed_pixels[3*Cidx(to_remove[n][y], y, w)+1] = b * (n == 1);
             removed_pixels[3*Cidx(to_remove[n][y], y, w)+2] = 0;
         }
     }

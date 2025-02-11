@@ -4,7 +4,7 @@ FLAGS=-Wall -Wextra
 ifdef DEBUG
 	FLAGS+=-ggdb
 else
-	FLAGS+=-O3
+	FLAGS+=-O0
 endif
 
 
